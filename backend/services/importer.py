@@ -28,8 +28,6 @@ def import_data_from_yaml(file_path: str | None = None) -> dict:
         'product_parameters_created': 0,
     }
 
-    shop = None
-
     with transaction.atomic():
         # Импортируем магазин
         shop_data = data.get('shop')  # Получаем данные магазина из YAML
