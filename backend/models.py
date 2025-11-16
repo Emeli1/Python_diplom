@@ -28,11 +28,6 @@ class UserManager(BaseUserManager):
     def _create_user(self, email, password, **extra_fields):
         """
         Создание пользователя
-
-        :param email:
-        :param password:
-        :param extra_fields:
-        :return:
         """
         if not email:
             raise ValueError('The given email must be set')
@@ -45,11 +40,6 @@ class UserManager(BaseUserManager):
     def create_user(self, email, password=None, **extra_fields):
         """
         Создание пользователя
-
-        :param email:
-        :param password:
-        :param extra_fields:
-        :return:
         """
         extra_fields.setdefault('is_staff', False)
         extra_fields.setdefault('is_superuser', False)
@@ -58,11 +48,6 @@ class UserManager(BaseUserManager):
     def create_superuser(self, email, password, **extra_fields):
         """
         Создание суперпользователя
-
-        :param email:
-        :param password:
-        :param extra_fields:
-        :return:
         """
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
