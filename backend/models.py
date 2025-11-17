@@ -250,9 +250,9 @@ class Order(models.Model):
                              on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='Дата создания')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='Дата обновления')
-    state = models.CharField(max_length=20,
-                             choices=STATE_CHOICES,
-                             verbose_name='Статус заказа')
+    status = models.CharField(max_length=20,
+                              choices=STATE_CHOICES,
+                              verbose_name='Статус заказа')
     contact = models.ForeignKey(Contact,
                                 verbose_name='Контакт',
                                 related_name='orders',

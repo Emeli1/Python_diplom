@@ -10,6 +10,8 @@ from typing import Optional
 from requests import get
 from yaml import load as load_yaml, Loader
 from rest_framework.authtoken.models import Token
+from rest_framework.authentication import TokenAuthentication, SessionAuthentication
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from ujson import loads as load_json
@@ -18,7 +20,7 @@ from .models import User, Shop, Category, Product, ProductInfo, \
     Parameter, ProductParameter, Contact, Order, OrderItem, ConfirmEmailToken
 from .serializers import UserSerializer, ShopSerializer, \
     CategorySerializer, ProductSerializer, ProductInfoSerializer, \
-    ParameterSerializer, ProductParameterSerializer, OrderSerializer, OrderItemSerializer, ContactSerializer
+    OrderSerializer, OrderItemSerializer, ContactSerializer
 from .services.importer import import_data_from_yaml
 
 
@@ -39,7 +41,7 @@ def parse_boolean_state(state_str: str) -> Optional[bool]:
         'false': False, 'no': False, '0': False, 'n': False, 'off': False
     }
 
-    return mapping.get(state_str.lower().strip)
+    return mapping.get(state_str.lower().strip())
 
 
 class ShopUpdate(APIView):
@@ -148,11 +150,12 @@ class LogoutAccountView(APIView):
     """
     Выход пользователя
     """
+    authentication_classes = [TokenAuthentication, SessionAuthentication]
+    permission_classes = [IsAuthenticated]
     def post(self, request, *args, **kwargs):
-        if request.user.is_authenticated:
-            request.user.auth_token.delete()
-            return JsonResponse({'Status': True, 'Message': 'Вы успешно вышли из системы'})
-        return JsonResponse({'Status': False, 'Errors': 'Пользователь не аутентифицирован'}, status=403)
+        # DRF ensures user is authenticated due to permission_classes
+        request.user.auth_token.delete()
+        return JsonResponse({'Status': True, 'Message': 'Вы успешно вышли из системы'})
 
 
 class ShopListView(APIView):
@@ -224,7 +227,7 @@ class ProductInfoView(APIView):
     """
     def get(self, request, *args, **kwargs):
         # Начинаем с базового запроса, чтобы фильтровать только активные магазины
-        query = Q(shop_state=True)
+        query = Q(shop__state=True)
 
         # Получаем параметры запроса
         shop_id = request.query_params.get('shop_id')
@@ -240,7 +243,7 @@ class ProductInfoView(APIView):
 
         # Получаем queryset с фильтрацией и оптимизацией запросов
         queryset = (ProductInfo.objects.filter(query).
-                    select_related('shop', 'product_category').    # Для получения связанных объектов
+                    select_related('shop', 'product__category').    # Для получения связанных объектов
                     prefetch_related('product_parameters__parameter').    # Для многих параметров
                     distinct())    # Убираем дубликаты
 
@@ -292,6 +295,7 @@ class BasketView(APIView):
                         else:
                             return JsonResponse({'Status': False, 'Errors': serializer.errors})
                     return JsonResponse({'Status': True, 'Message': 'Товар добавлен в корзину'})
+            return JsonResponse({'Status': False, 'Errors': 'Нет данных для добавления'})
         return JsonResponse({'Status': False, 'Errors': 'Пользователь не аутентифицирован'}, status=403)
 
 
@@ -404,13 +408,11 @@ class PartnerStateView(APIView):
                 return JsonResponse({'Status': False, 'Errors': 'Пользователь не является партнёром'}, status=403)
             state = request.data.get('state')
             if state is not None:
-                try:
-                    parsed_state = parse_boolean_state(state)
-                    if parsed_state is not None:
-                        Shop.objects.filter(user_id=request.user.id).update(state=parsed_state)
-                        return JsonResponse({'Status': True, 'Message': 'Состояние успешно изменено'})
-                except ValueError as error:
-                    return JsonResponse({'Status': False, 'Errors': f'Некорректное значение состояния: {error}'})
+                parsed_state = parse_boolean_state(state)
+                if parsed_state is not None:
+                    Shop.objects.filter(user_id=request.user.id).update(state=parsed_state)
+                    return JsonResponse({'Status': True, 'Message': 'Состояние успешно изменено'})
+                return JsonResponse({'Status': False, 'Errors': 'Некорректное значение состояния'})
             return JsonResponse({'Status': False, 'Errors': 'Состояние не передано'})
         return JsonResponse({'Status': False, 'Errors': 'Пользователь не аутентифицирован'}, status=403)
 

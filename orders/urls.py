@@ -21,5 +21,5 @@ from backend.views import ShopUpdate
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('api/v1/orders/', include('backend.urls', namespace='backend')),
+    path('api/v1/', include('backend.urls', namespace='backend')),
 ]

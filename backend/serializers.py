@@ -1,12 +1,12 @@
 from rest_framework import serializers
-from .models import User, Shop, Category, Product, ProductInfo, Parameter, ProductParameter, Contact, Order
+from .models import User, Shop, Category, Product, ProductInfo, Parameter, ProductParameter, Contact, Order, OrderItem
 
 
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ('id', 'first_name', 'last_name', 'email', 'company', 'position', 'contacts')
-        read_only_fields = ('id',)
+        read_only_fields = ('id', 'contacts')
 
 
 class ShopSerializer(serializers.ModelSerializer):
@@ -53,7 +53,6 @@ class ProductInfoSerializer(serializers.ModelSerializer):
     shop = ShopSerializer(read_only=True)
     product_parameters = ProductParameterSerializer(many=True, read_only=True)
 
-
     class Meta:
         model = ProductInfo
         fields = ('id', 'product', 'shop', 'quantity', 'price', 'price_rrc', 'product_parameters')
@@ -70,22 +69,20 @@ class ContactSerializer(serializers.ModelSerializer):
         }
 
 
-class OrderItemSerializer(serializers.Serializer):
-    product_info = ProductInfoSerializer(read_only=True)
-    quantity = serializers.IntegerField()
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ('id', 'order', 'product_info', 'quantity')
+        read_only_fields = ('id',)
 
 
-class OrderSerializer(serializers.Serializer):
+class OrderSerializer(serializers.ModelSerializer):
     ordered_items = OrderItemSerializer(many=True, read_only=True)
-    total_price = serializers.DecimalField(max_digits=10, decimal_places=2)
-    contact = ContactSerializer(read_only=True)
-    status = serializers.CharField()
-    created_at = serializers.DateTimeField()
-    updated_at = serializers.DateTimeField()
+    total_sum = serializers.DecimalField(max_digits=10, decimal_places=2, required=False)
 
     class Meta:
         model = Order
-        fields = ('id', 'ordered_items', 'total_price', 'contact', 'state', 'created_at', 'updated_at')
+        fields = ('id', 'ordered_items', 'total_sum', 'contact', 'status', 'created_at', 'updated_at')
         read_only_fields = ('id',)
 
 
