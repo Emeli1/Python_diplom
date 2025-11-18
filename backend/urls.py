@@ -9,7 +9,12 @@ from backend.views import (ShopUpdate, RegisterAccountView, ConfirmAccountView,
                            CategoryDetailView, ProductListView, ProductDetailView,
                            ProductInfoView, BasketView, PartnerUpdateView,
                            PartnerStateView, PartnerOrdersView, ContactView,
-                           OrderView)
+                           OrderView,
+                           AdminCategoryListCreateView, AdminCategoryDetailView,
+                           AdminProductListCreateView, AdminProductDetailView,
+                           AdminProductInfoListCreateView, AdminProductInfoDetailView,
+                           AdminShopListCreateView, AdminShopDetailView,
+                           AdminOrderListView, AdminOrderDetailUpdateView)
 
 
 app_name = 'backend'
@@ -37,4 +42,15 @@ urlpatterns = [
     path('partner/state', PartnerStateView.as_view(), name='partner-state'),
     path('partner/orders', PartnerOrdersView.as_view(), name='partner-orders'),
     path('orders', OrderView.as_view(), name='orders'),
+    # Admin API склад
+    path('admin/categories', AdminCategoryListCreateView.as_view(), name='admin-category-list'),
+    path('admin/categories/<int:pk>', AdminCategoryDetailView.as_view(), name='admin-category-detail'),
+    path('admin/products', AdminProductListCreateView.as_view(), name='admin-product-list'),
+    path('admin/products/<int:pk>', AdminProductDetailView.as_view(), name='admin-product-detail'),
+    path('admin/product-infos', AdminProductInfoListCreateView.as_view(), name='admin-product-info-list'),
+    path('admin/product-infos/<int:pk>', AdminProductInfoDetailView.as_view(), name='admin-product-info-detail'),
+    path('admin/shops', AdminShopListCreateView.as_view(), name='admin-shop-list'),
+    path('admin/shops/<int:pk>', AdminShopDetailView.as_view(), name='admin-shop-detail'),
+    path('admin/orders', AdminOrderListView.as_view(), name='admin-order-list'),
+    path('admin/orders/<int:pk>', AdminOrderDetailUpdateView.as_view(), name='admin-order-detail'),
 ]

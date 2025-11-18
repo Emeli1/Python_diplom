@@ -11,16 +11,19 @@ from requests import get
 from yaml import load as load_yaml, Loader
 from rest_framework.authtoken.models import Token
 from rest_framework.authentication import TokenAuthentication, SessionAuthentication
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, IsAdminUser
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.generics import ListCreateAPIView, RetrieveUpdateDestroyAPIView, ListAPIView, RetrieveUpdateAPIView
 from ujson import loads as load_json
 from backend.signals import new_user_registered, new_order
 from .models import User, Shop, Category, Product, ProductInfo, \
     Parameter, ProductParameter, Contact, Order, OrderItem, ConfirmEmailToken
 from .serializers import UserSerializer, ShopSerializer, \
     CategorySerializer, ProductSerializer, ProductInfoSerializer, \
-    OrderSerializer, OrderItemSerializer, ContactSerializer
+    OrderSerializer, OrderItemSerializer, ContactSerializer, \
+    CategoryAdminSerializer, ProductAdminWriteSerializer, ProductInfoAdminWriteSerializer, \
+    ShopAdminSerializer, OrderAdminUpdateSerializer
 from .services.importer import import_data_from_yaml
 
 
@@ -74,7 +77,7 @@ class RegisterAccountView(APIView):
                     user = user_serializer.save()
                     user.set_password(request.data['password'])    # Хешируем пароль
                     user.save()    # Сохраняем хешированный пароль
-                    new_user_registered.send(sendler=self.__class__, user_id=user.id)
+                    new_user_registered.send(sender=self.__class__, user_id=user.id)
                     return JsonResponse({'Status': True, 'Message': 'Регистрация прошла успешно'})
                 else:
                     return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
@@ -106,28 +109,6 @@ class AccountDetailsView(APIView):
         if request.user.is_authenticated:
             user_serializer = UserSerializer(request.user)
             return JsonResponse({'Status': True, 'User': user_serializer.data})
-        return JsonResponse({'Status': False, 'Errors': 'Пользователь не аутентифицирован'}, status=403)
-
-    def patch(self, request, *args, **kwargs):
-        if request.user.is_authenticated:
-            if 'password' in request.data:
-                try:
-                    validate_password(request.data['password'])
-                except Exception as password_error:
-                    error_array = []
-                    for error in password_error:
-                        error_array.append(error)
-                    return JsonResponse({'Status': False, 'Errors': {'password': error_array}})
-                else:
-                    request.user.set_password(request.data['password'])
-                    request.user.save()
-
-            user_serializer = UserSerializer(request.user, data=request.data, partial=True)
-            if user_serializer.is_valid():
-                user_serializer.save()
-                return JsonResponse({'Status': True, 'Message': 'Данные успешно обновлены'})
-            else:
-                return JsonResponse({'Status': False, 'Errors': user_serializer.errors})
         return JsonResponse({'Status': False, 'Errors': 'Пользователь не аутентифицирован'}, status=403)
 
 
@@ -542,7 +523,7 @@ class OrderView(APIView):
                             basket.contact = contact
                             basket.status = 'new'
                             basket.save()
-                            new_order.send(sendler=self.__class__, user_id=request.user.id, order_id=basket.id)
+                            new_order.send(sender=self.__class__, user_id=request.user.id, order_id=basket.id)
                             return JsonResponse({'Status': True, 'Message': 'Заказ успешно оформлен'})
                         else:
                             return JsonResponse({'Status': False, 'Errors': 'Контакт не найден'})
@@ -553,5 +534,126 @@ class OrderView(APIView):
                     return JsonResponse({'Status': False, 'Errors': 'Ошибка при оформлении заказа'})
             return JsonResponse({'Status': False, 'Errors': 'Некорректный или отсутствующий ID контакта'})
         return JsonResponse({'Status': False, 'Errors': 'Пользователь не аутентифицирован'}, status=403)
+
+
+"""
+Admin API Views (склад).
+Все представления доступны только администраторам.
+"""
+
+class AdminCategoryListCreateView(ListCreateAPIView):
+    """
+    Отображает список всех категорий товаров (Category)
+    и позволяет создавать новые категории.
+    """
+    queryset = Category.objects.all().order_by('id')
+    serializer_class = CategoryAdminSerializer
+    permission_classes = [IsAdminUser]
+
+
+class AdminCategoryDetailView(RetrieveUpdateDestroyAPIView):
+    """
+    Позволяет просматривать, обновлять и удалять
+    конкретную категорию товаров (Category) по её ID.
+    ID категории передаётся в URL.
+    """
+    queryset = Category.objects.all()
+    serializer_class = CategoryAdminSerializer
+    permission_classes = [IsAdminUser]
+
+
+class AdminProductListCreateView(ListCreateAPIView):
+    """
+    Отображает список всех товаров (Product)
+    с информацией о категории и позволяет добавлять новые товары.
+    """
+    queryset = Product.objects.select_related('category').all().order_by('id') # подтягиваем (select_related)
+    serializer_class = ProductAdminWriteSerializer                             # информацию о связанных объектах
+    permission_classes = [IsAdminUser]                                         # (category)
+
+
+class AdminProductDetailView(RetrieveUpdateDestroyAPIView):
+    """
+    Позволяет просматривать, обновлять и удалять
+    конкретный товар (Product) по его ID.
+    ID товара передаётся в URL.
+    """
+    queryset = Product.objects.select_related('category').all()
+    serializer_class = ProductAdminWriteSerializer
+    permission_classes = [IsAdminUser]
+
+
+class AdminProductInfoListCreateView(ListCreateAPIView):
+    """
+    Отображает список всей информации о товарах (ProductInfo)
+    с деталями о товаре, категории и магазине,
+    и позволяет добавлять новые записи о товарах.
+    """
+    queryset = ProductInfo.objects.select_related('product__category', 'shop').all().order_by('id')
+    serializer_class = ProductInfoAdminWriteSerializer
+    permission_classes = [IsAdminUser]
+
+
+class AdminProductInfoDetailView(RetrieveUpdateDestroyAPIView):
+    """
+    Позволяет просматривать, обновлять и удалять
+    информацию о конкретном товаре (ProductInfo) по его ID.
+    ID записи передаётся в URL.
+    """
+    queryset = ProductInfo.objects.select_related('product__category', 'shop').all()
+    serializer_class = ProductInfoAdminWriteSerializer
+    permission_classes = [IsAdminUser]
+
+
+class AdminShopListCreateView(ListCreateAPIView):
+    """
+    Отображает список всех магазинов (Shop)
+    с информацией о пользователе, которому принадлежит магазин
+    и позволяет добавлять новые магазины.
+    """
+    queryset = Shop.objects.select_related('user').all().order_by('id')
+    serializer_class = ShopAdminSerializer
+    permission_classes = [IsAdminUser]
+
+
+class AdminShopDetailView(RetrieveUpdateDestroyAPIView):
+    """
+    Позволяет просматривать, обновлять и удалять
+    запись о конкретном магазине (Shop) по его ID.
+    ID магазина передаётся в URL.
+    """
+    queryset = Shop.objects.select_related('user').all()
+    serializer_class = ShopAdminSerializer
+    permission_classes = [IsAdminUser]
+
+
+class AdminOrderListView(ListAPIView):
+    """
+    Отображает список всех заказов (Order),
+    исключая заказы со статусом "статус корзины" (basket).
+    Включает информацию о контакте и пользователе,
+    а также детали о заказанных товарах,
+    связанных продуктах, категориях и параметрах продуктов.
+    """
+    queryset = Order.objects.select_related('contact', 'user').prefetch_related(
+        'ordered_items__product_info__product__category',
+        'ordered_items__product_info__product_parameters__parameter',
+    ).exclude(status='basket').order_by('-created_at')
+    serializer_class = OrderSerializer
+    permission_classes = [IsAdminUser]
+
+
+class AdminOrderDetailUpdateView(RetrieveUpdateAPIView):
+    """
+    Позволяет просматривать
+    конкретный заказ (Order) по его ID
+    и обновлять status и/или contact.
+    ID заказа передаётся в URL.
+    Включает информацию о контакте и пользователе.
+    """
+    queryset = Order.objects.select_related('contact', 'user')
+    serializer_class = OrderAdminUpdateSerializer
+    permission_classes = [IsAdminUser]
+
 
 

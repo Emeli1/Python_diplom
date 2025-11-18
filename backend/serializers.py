@@ -16,6 +16,40 @@ class ShopSerializer(serializers.ModelSerializer):
         read_only_fields = ('id',)
 
 
+class CategoryAdminSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Category
+        fields = ("id", "name")
+
+
+class ProductAdminWriteSerializer(serializers.ModelSerializer):
+    category = serializers.PrimaryKeyRelatedField(queryset=Category.objects.all())
+
+    class Meta:
+        model = Product
+        fields = ("id", "name", "category")
+
+
+class ProductInfoAdminWriteSerializer(serializers.ModelSerializer):
+    product = serializers.PrimaryKeyRelatedField(queryset=Product.objects.all())
+    shop = serializers.PrimaryKeyRelatedField(queryset=Shop.objects.all())
+
+    class Meta:
+        model = ProductInfo
+        fields = ("id", "product", "shop", "model", "external_id", "quantity", "price", "price_rrc")
+
+
+class ShopAdminSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Shop
+        fields = ("id", "name", "url", "state", "user")
+
+
+class OrderAdminUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Order
+        fields = ("id", "status", "contact")
+
 class CategorySerializer(serializers.ModelSerializer):
     class Meta:
         model = Category

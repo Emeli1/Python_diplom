@@ -11,7 +11,7 @@ new_user_registered = Signal()
 new_order = Signal()
 
 @receiver(reset_password_token_created)
-def password_reset_token_created_receiver(sender, instance, reset_password_token, *kwargs):
+def password_reset_token_created_receiver(sender, instance, reset_password_token, *args, **kwargs):
     """
     Отправка письма с токеном для сброса пароля.
     """
@@ -49,7 +49,7 @@ def new_user_registered_receiver(sender: Type[User], instance: User, created: bo
 
 
 @receiver(new_order)
-def new_order_signal(user_id, **kwargs):
+def new_order_signal(sender, user_id, **kwargs):
     """
     Отправка письма с информацией о новом заказе.
     """
