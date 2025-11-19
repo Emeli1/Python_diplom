@@ -24,7 +24,7 @@ from .serializers import UserSerializer, ShopSerializer, \
     OrderSerializer, OrderItemSerializer, ContactSerializer, \
     CategoryAdminSerializer, ProductAdminWriteSerializer, ProductInfoAdminWriteSerializer, \
     ShopAdminSerializer, OrderAdminUpdateSerializer
-from .services.importer import import_data_from_yaml
+from .tasks import do_import
 
 
 class BooleanState(Enum):
@@ -52,8 +52,8 @@ class ShopUpdate(APIView):
     Импорт товаров
     """
     def post(self, request, *args, **kwargs):
-        stats = import_data_from_yaml()
-        return Response(stats)
+        async_result = do_import.delay()
+        return Response({'task_id': async_result.id, 'status': 'queued'}, status=202)
 
 
 class RegisterAccountView(APIView):

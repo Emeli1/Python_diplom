@@ -1,9 +1,7 @@
 import os
-
 import yaml
 from django.conf import settings
 from django.db import transaction
-
 from backend.models import Shop, Category, ProductInfo, Parameter, ProductParameter, Product
 
 
